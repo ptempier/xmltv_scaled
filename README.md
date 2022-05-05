@@ -1,5 +1,5 @@
 # xmltv_scaled
-update closer data more often and far away data less often
+Update closer data more often and far away data less often
 
 The script is currently set for tv_grab_fr_telerama and inserting into tvheadend xmltv.sock
 
