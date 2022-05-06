@@ -1,67 +1,67 @@
 #!/bin/bash
-#set -x
 
 GRABBER="tv_grab_fr_telerama"
 BASE="/data"
+DATA="$BASE/xmldata"
 GRAB_OPTS="--no_aggregatecat"
 
 function rotate_files {
-
-        echo "rotating files"
-        mv "$BASE/$GRABBER.xml.10" "$BASE/$GRABBER.xml.9"
-        mv "$BASE/$GRABBER.xml.9"  "$BASE/$GRABBER.xml.8"
-        mv "$BASE/$GRABBER.xml.8"  "$BASE/$GRABBER.xml.7"
-        mv "$BASE/$GRABBER.xml.7"  "$BASE/$GRABBER.xml.6"
-        mv "$BASE/$GRABBER.xml.6"  "$BASE/$GRABBER.xml.5"
-        mv "$BASE/$GRABBER.xml.5"  "$BASE/$GRABBER.xml.4"
-        mv "$BASE/$GRABBER.xml.4"  "$BASE/$GRABBER.xml.3"
-        mv "$BASE/$GRABBER.xml.3"  "$BASE/$GRABBER.xml.2"
-        mv "$BASE/$GRABBER.xml.2"  "$BASE/$GRABBER.xml.1"
-        mv "$BASE/$GRABBER.xml.1"  "$BASE/$GRABBER.xml.0"
-
+	
+	echo "Rotating files"
+	mv "$DATA/$GRABBER.xml.10" "$DATA/$GRABBER.xml.09"
+	mv "$DATA/$GRABBER.xml.09" "$DATA/$GRABBER.xml.08"
+	mv "$DATA/$GRABBER.xml.08" "$DATA/$GRABBER.xml.07"
+	mv "$DATA/$GRABBER.xml.07" "$DATA/$GRABBER.xml.06"
+	mv "$DATA/$GRABBER.xml.06" "$DATA/$GRABBER.xml.05"
+	mv "$DATA/$GRABBER.xml.05" "$DATA/$GRABBER.xml.04"
+	mv "$DATA/$GRABBER.xml.04" "$DATA/$GRABBER.xml.03"
+	mv "$DATA/$GRABBER.xml.03" "$DATA/$GRABBER.xml.02"
+	mv "$DATA/$GRABBER.xml.02" "$DATA/$GRABBER.xml.01"
+	mv "$DATA/$GRABBER.xml.01" "$DATA/$GRABBER.xml.00"
 }
 
 function run_if_older {
-        OFFSET="$1"
-        HOURS="$2"
-        AGE="$(( $HOURS * 3600 ))"
 
-        FILE="$BASE/$GRABBER.xml.$OFFSET"
+	OFFSET="$1"
+	DAYS="$2"
+	if [ -z $OFFSET ] ; then echo "Missing offset, skipping"; return 1 ; fi
+	if [ -z $DAYS ]   ; then echo "Missing hours, skipping" ; return 1 ; fi
 
-        NOW=$(( $(date +"%s" ) ))
-        FDATE=$(stat -c "%Y" "$FILE")
+	AGE="$( echo "$DAYS" |awk '{print $1 * 12 * 3600}')"
 
-        if  [[ ! -f "$FILE" ]]
-        then
-                FDATE=0
-        fi
+	FILE="$DATA/$GRABBER.xml.$OFFSET"
 
-        if [[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]
-        then
-                echo "'$FILE' is older than $HOURS hours, updating"
-                "$BASE/$GRABBER" --config-file "$BASE/$GRABBER.config"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
-                cat "$FILE" | socat - "/tvheadend/epggrab/xmltv.sock"
-                if [[ "$OFFSET" -eq "$2" ]]
-                then
-                        rotate_file
-                fi
-        else
-                echo "'$FILE' is newer than $HOURS hours, no change"
-        fi
+	NOW=$(( $(date +"%s" ) ))
+	FDATE=$(stat -c "%Y" "$FILE")
+
+	if  [[ ! -f "$FILE" ]] ; then FDATE=0 ; fi
+
+	if [[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]
+       	then
+		echo "'$FILE' is older than $DAYS days, updating"
+		"$BASE/$GRABBER" --config-file "$BASE/$GRABBER.config"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
+		cat "$FILE" | socat - "/tvheadend/epggrab/xmltv.sock"
+
+		if  [[ "$OFFSET" = "02" ]] ;then rotate_files ; fi
+	else
+		echo "'$FILE' is newer than $DAYS days, no change"
+	fi
 }
 
 function main {
-
-        run_if_older 0  3            #3h = 3600*3
-        run_if_older 1  $(( 12*1 )) #12h
-        run_if_older 2  $(( 12*2 )) #24h
-        run_if_older 3  $(( 12*3 ))
-        run_if_older 4  $(( 12*4 ))
-        run_if_older 5  $(( 12*5 ))
-        run_if_older 6  $(( 12*6 ))
-        run_if_older 7  $(( 12*7 ))
-        run_if_older 8  $(( 12*8 ))
-        run_if_older 9  $(( 12*9 ))
-        run_if_older 10 $(( 12*10 )) #5j
+	echo "start $(date)"
+	run_if_older 00 0.2 #2.4h
+	run_if_older 01 01  #12h
+	run_if_older 02 02  #24h
+	run_if_older 03 03
+	run_if_older 04 04 
+	run_if_older 05 05
+	run_if_older 06 06
+	run_if_older 07 07 
+	run_if_older 08 08 
+	run_if_older 09 09 
+	run_if_older 10 10  #5j
+	echo "end $(date)"
 }
-main                         
+
+main
