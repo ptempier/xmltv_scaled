@@ -3,7 +3,10 @@
 GRABBER="tv_grab_fr_telerama"
 BASE="/data"
 DATA="$BASE/xmldata"
-GRAB_OPTS="--no_aggregatecat"
+GRAB_OPTS="--no_aggregatecat -delay 5"
+
+#to be more secure , need to name  files with 
+#date -d "+ 10 days" +"%Y %m %d"
 
 function rotate_files {
 	
