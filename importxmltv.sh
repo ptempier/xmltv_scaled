@@ -6,6 +6,13 @@ DATA="$BASE/xmldata"
 GRAB_OPTS="--no_aggregatecat -delay 5 --casting"
 GRAB_CFG="/data/tv_grab_fr_telerama_tnt.config"
 
+function logit {
+
+echo "$(date  +"%Y_%m_%d-%H-%M-%S") $@"
+
+
+}
+
 function delete_file {
 	CLEAN="$1"
 
@@ -13,7 +20,7 @@ function delete_file {
 	DEL_FILE="$DATA/$GRABBER.xml.$DATE"
 	if [[ -f "$DEL_FILE" ]]
 	then
-		echo "Deleting $DEL_FILE , $CLEAN days old"
+		logit "Deleting $DEL_FILE , $CLEAN days old"
 	        rm -f "$DEL_FILE"
 	fi
 }
@@ -26,7 +33,7 @@ function clean_old {
 }
 
 function get_xml {
-	echo "'$FILE' is older than $DAYS days, updating"
+	logit "'$FILE' is older than $DAYS days, updating"
         "$BASE/$GRABBER" --config-file "$GRAB_CFG"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
         cat "$FILE" | socat - "/tvheadend/epggrab/xmltv.sock"
         clean_old
@@ -36,8 +43,8 @@ function run_if_older {
 
 	OFFSET="$1"
 	DAYS="$2"
-	if [ -z $OFFSET ] ; then echo "Missing offset, skipping"; return 1 ; fi
-	if [ -z $DAYS ]   ; then echo "Missing hours, skipping" ; return 1 ; fi
+	if [ -z $OFFSET ] ; then logit "Missing offset, skipping"; return 1 ; fi
+	if [ -z $DAYS ]   ; then logit "Missing hours, skipping" ; return 1 ; fi
 
 	AGE="$( echo "$DAYS" |awk '{print $1 * 12 * 3600}')"
 	DATE="$(date -d "+ $OFFSET days" +"%Y_%m_%d")"
@@ -46,18 +53,18 @@ function run_if_older {
 	NOW=$(( $(date +"%s" ) ))
 	FDATE=$(date -d "+ $OFFSET days" +"%s")
 
-        if	! grep -q '</tv>' "$FILE"		; then echo "Getting incomplete file $FILE"     ; get_xm
-	elif 	[[ -f "$FILE" ]] 			; then echo "File is present, skiping : $FILE" 
-	elif	[[ ! -f "$FILE" ]] 			; then echo "Getting missing file $FILE"	; get_xml 
-	elif	[[ ! -s "$FILE" ]]			; then echo "Getting empty file $FILE"		; get_xml 
-	elif	[[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]	; then echo "Time to get file : $FILE"		; get_xml 
+        if	! grep -q '</tv>' "$FILE"		; then logit "Getting incomplete file $FILE"     ; get_xml
+	elif 	[[ -f "$FILE" ]] 			; then logit "File is present, skiping : $FILE" 
+	elif	[[ ! -f "$FILE" ]] 			; then logit "Getting missing file $FILE"	; get_xml 
+	elif	[[ ! -s "$FILE" ]]			; then logit "Getting empty file $FILE"		; get_xml 
+	elif	[[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]	; then logit "Time to get file : $FILE"		; get_xml 
 	else
-		echo "Strange situation"
+		logit "Strange situation"
 	fi
 }
 
 function main {
-	echo "start $(date)"
+	logit "#=== Start ====================="
 	run_if_older 00 0.2 #2.4h
 	run_if_older 01 01  #12h
 	run_if_older 02 02  #24h
@@ -69,7 +76,7 @@ function main {
 	run_if_older 08 08 
 	run_if_older 09 09 
 	run_if_older 10 10  #5j
-	echo "end $(date)"
+	logit "#=== End ======================="
 }
 
 main
