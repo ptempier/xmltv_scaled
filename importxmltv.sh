@@ -3,14 +3,12 @@
 GRABBER="tv_grab_fr_telerama"
 BASE="/data"
 DATA="$BASE/xmldata"
-GRAB_OPTS="--no_aggregatecat -delay 5 --casting"
+#GRAB_OPTS="--no_aggregatecat -delay 5 --casting" #casting is  ultra heavy going from 3>100 api calls
+GRAB_OPTS="--no_aggregatecat -delay 5"
 GRAB_CFG="/data/tv_grab_fr_telerama_tnt.config"
 
 function logit {
-
-echo "$(date  +"%Y_%m_%d-%H-%M-%S") $@"
-
-
+	echo "$(date  +"%Y_%m_%d-%H-%M-%S") $@"
 }
 
 function delete_file {
@@ -26,10 +24,13 @@ function delete_file {
 }
 
 function clean_old {
+	#Cleanup in case the app wasn t running.
 	delete_file 2
 	delete_file 3
 	delete_file 4
 	delete_file 5
+        delete_file 6
+        delete_file 7
 }
 
 function get_xml {
@@ -57,7 +58,7 @@ function run_if_older {
 	elif 	[[ -f "$FILE" ]] 			; then logit "File is present, skiping : $FILE" 
 	elif	[[ ! -f "$FILE" ]] 			; then logit "Getting missing file $FILE"	; get_xml 
 	elif	[[ ! -s "$FILE" ]]			; then logit "Getting empty file $FILE"		; get_xml 
-	elif	[[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]	; then logit "Time to get file : $FILE"		; get_xml 
+	elif	[[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]	; then logit "Updating file : $FILE"		; get_xml 
 	else
 		logit "Strange situation"
 	fi
