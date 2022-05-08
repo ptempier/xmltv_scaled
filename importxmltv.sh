@@ -6,24 +6,30 @@ DATA="$BASE/xmldata"
 GRAB_OPTS="--no_aggregatecat -delay 5 --casting"
 GRAB_CFG="/data/tv_grab_fr_telerama_tnt.config"
 
+function delete_file {
+	CLEAN="$1"
 
-#to be more secure, need to name  files with 
-#date -d "+ 10 days" +"%Y %m %d"
+	DATE="$(date -d "- $CLEAN days" +"%Y_%m_%d")"
+	DEL_FILE="$DATA/$GRABBER.xml.$DATE"
+	if [[ -f "$DEL_FILE" ]]
+	then
+		echo "Deleting $DEL_FILE , $CLEAN days old"
+	        rm -f "$DEL_FILE"
+	fi
+}
 
-function rotate_files {
-	
-	echo "Rotating files"
-	mv "$DATA/$GRABBER.xml.01" "$DATA/$GRABBER.xml.00"
-	mv "$DATA/$GRABBER.xml.02" "$DATA/$GRABBER.xml.01"
-	mv "$DATA/$GRABBER.xml.03" "$DATA/$GRABBER.xml.02"
-	mv "$DATA/$GRABBER.xml.04" "$DATA/$GRABBER.xml.03"
-	mv "$DATA/$GRABBER.xml.05" "$DATA/$GRABBER.xml.04"
-	mv "$DATA/$GRABBER.xml.06" "$DATA/$GRABBER.xml.05"
-	mv "$DATA/$GRABBER.xml.07" "$DATA/$GRABBER.xml.06"
-	mv "$DATA/$GRABBER.xml.08" "$DATA/$GRABBER.xml.07"
-	mv "$DATA/$GRABBER.xml.09" "$DATA/$GRABBER.xml.08"
-	mv "$DATA/$GRABBER.xml.10" "$DATA/$GRABBER.xml.09"
+function clean_old {
+	delete_file 2
+	delete_file 3
+	delete_file 4
+	delete_file 5
+}
 
+function get_xml {
+	echo "'$FILE' is older than $DAYS days, updating"
+        "$BASE/$GRABBER" --config-file "$GRAB_CFG"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
+        cat "$FILE" | socat - "/tvheadend/epggrab/xmltv.sock"
+        clean_old
 }
 
 function run_if_older {
@@ -34,25 +40,19 @@ function run_if_older {
 	if [ -z $DAYS ]   ; then echo "Missing hours, skipping" ; return 1 ; fi
 
 	AGE="$( echo "$DAYS" |awk '{print $1 * 12 * 3600}')"
-
-	FILE="$DATA/$GRABBER.xml.$OFFSET"
+	DATE="$(date -d "+ $OFFSET days" +"%Y_%m_%d")"
+	FILE="$DATA/$GRABBER.xml.$DATE"
 
 	NOW=$(( $(date +"%s" ) ))
-	FDATE=$(stat -c "%Y" "$FILE")
+	FDATE=$(date -d "+ $OFFSET days" +"%s")
 
-	if  [[ ! -f "$FILE" ]] ; then FDATE=0 ; echo "Missing file $FILE"; fi
-	if  [[ ! -s "$FILE" ]] ; then FDATE=0 ; echo "Empty   file $FILE"; fi
-
-
-	if [[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]
-       	then
-		echo "'$FILE' is older than $DAYS days, updating"
-		"$BASE/$GRABBER" --config-file "$GRAB_CFG"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
-		cat "$FILE" | socat - "/tvheadend/epggrab/xmltv.sock"
-
-		if  [[ "$OFFSET" = "02" ]] ;then rotate_files ; fi
+        if	! grep -q '</tv>' "$FILE"		; then echo "Getting incomplete file $FILE"     ; get_xm
+	elif 	[[ -f "$FILE" ]] 			; then echo "File is present, skiping : $FILE" 
+	elif	[[ ! -f "$FILE" ]] 			; then echo "Getting missing file $FILE"	; get_xml 
+	elif	[[ ! -s "$FILE" ]]			; then echo "Getting empty file $FILE"		; get_xml 
+	elif	[[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]	; then echo "Time to get file : $FILE"		; get_xml 
 	else
-		echo "'$FILE' is newer than $DAYS days, no change"
+		echo "Strange situation"
 	fi
 }
 
