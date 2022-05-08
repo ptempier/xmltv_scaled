@@ -6,6 +6,7 @@ DATA="$BASE/xmldata"
 #GRAB_OPTS="--no_aggregatecat -delay 5 --casting" #casting is  ultra heavy going from 3>100 api calls
 GRAB_OPTS="--no_aggregatecat -delay 5"
 GRAB_CFG="/data/tv_grab_fr_telerama_tnt.config"
+TVHH_SOCK="/tvheadend/epggrab/xmltv.sock"
 
 function logit {
 	echo "$(date  +"%Y_%m_%d-%H-%M-%S") $@"
@@ -36,7 +37,7 @@ function clean_old {
 function get_xml {
 	logit "'$FILE' is older than $DAYS days, updating"
         "$BASE/$GRABBER" --config-file "$GRAB_CFG"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
-        cat "$FILE" | socat - "/tvheadend/epggrab/xmltv.sock"
+        cat "$FILE" | socat - "$TVHH_SOCK"
         clean_old
 }
 
@@ -54,11 +55,12 @@ function run_if_older {
 	NOW=$(( $(date +"%s" ) ))
 	FDATE=$(date -d "+ $OFFSET days" +"%s")
 
-        if	! grep -q '</tv>' "$FILE"		; then logit "Getting incomplete file $FILE"     ; get_xml
-	elif 	[[ -f "$FILE" ]] 			; then logit "File is present, skiping : $FILE" 
-	elif	[[ ! -f "$FILE" ]] 			; then logit "Getting missing file $FILE"	; get_xml 
-	elif	[[ ! -s "$FILE" ]]			; then logit "Getting empty file $FILE"		; get_xml 
-	elif	[[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]]	; then logit "Updating file : $FILE"		; get_xml 
+	#order is important
+        if	[[ ! -f "$FILE" ]]                      ; then logit "Getting missing file $FILE"       ; get_xml
+        elif    [[ ! -s "$FILE" ]]                      ; then logit "Getting empty file $FILE"         ; get_xml 
+        elif	! grep -q '</tv>' "$FILE"		; then logit "Getting incomplete file $FILE"     ; get_xml
+        elif    [[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]] ; then logit "Updating file : $FILE"            ; get_xml 
+	elif 	[[ -f "$FILE" ]] 			; then logit "Up to date file , skipping : $FILE" 
 	else
 		logit "Strange situation"
 	fi
@@ -66,8 +68,8 @@ function run_if_older {
 
 function main {
 	logit "#=== Start ====================="
-	run_if_older 00 0.2 #2.4h
-	run_if_older 01 01  #12h
+	run_if_older 00 0.2 #2.4h = 0.2*12h
+	run_if_older 01 01  #12h = 1*12h
 	run_if_older 02 02  #24h
 	run_if_older 03 03
 	run_if_older 04 04 
