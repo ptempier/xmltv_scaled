@@ -35,6 +35,10 @@ function clean_old {
 }
 
 function get_xml {
+	OFFSET="$1"
+	DAYS="$2"
+        FILE="$3"
+
 	logit "'$FILE' is older than $DAYS days, updating"
         "$BASE/$GRABBER" --config-file "$GRAB_CFG"  --days 1 --offset "$OFFSET" $GRAB_OPTS   --output "$FILE"
         cat "$FILE" | socat - "$TVHH_SOCK"
@@ -53,13 +57,17 @@ function run_if_older {
 	FILE="$DATA/$GRABBER.xml.$DATE"
 
 	NOW=$(( $(date +"%s" ) ))
-	FDATE=$(date -d "+ $OFFSET days" +"%s")
+	#FDATE=$(date -d "+ $OFFSET days" +"%s")
+	FDATE=$(stat -c "%Y" "$FILE")
+
+	#Number="$( echo "$FDATE" "$NOW"  |awk '{print ( $2 - $1 ) / 3600 }')"
+	#echo "File is $Number hours old, update when $( echo "$DAYS" |awk '{print $1 * 12 }')  hours  old"
 
 	#order is important
-        if	[[ ! -f "$FILE" ]]                      ; then logit "Getting missing file $FILE"       ; get_xml
-        elif    [[ ! -s "$FILE" ]]                      ; then logit "Getting empty file $FILE"         ; get_xml 
-        elif	! grep -q '</tv>' "$FILE"		; then logit "Getting incomplete file $FILE"     ; get_xml
-        elif    [[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]] ; then logit "Updating file : $FILE"            ; get_xml 
+        if	[[ ! -f "$FILE" ]]                      ; then logit "Getting missing file $FILE"       ; get_xml "$OFFSET" "$DAYS" "$FILE"
+        elif    [[ ! -s "$FILE" ]]                      ; then logit "Getting empty file $FILE"         ; get_xml "$OFFSET" "$DAYS" "$FILE"
+        elif	! grep -q '</tv>' "$FILE"		; then logit "Getting incomplete file $FILE"    ; get_xml "$OFFSET" "$DAYS" "$FILE"
+        elif    [[ "$(( $NOW - $FDATE ))" -gt "$AGE" ]] ; then logit "Updating file : $FILE"            ; get_xml "$OFFSET" "$DAYS" "$FILE"
 	elif 	[[ -f "$FILE" ]] 			; then logit "Up to date file , skipping : $FILE" 
 	else
 		logit "Strange situation"
